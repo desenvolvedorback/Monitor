@@ -1,64 +1,59 @@
-const { google } = require('googleapis')
+// netlify/functions/getMonthly.js
+import { google } from "googleapis";
 
-exports.handler = async () => {
+export async function handler() {
   try {
-    const PROPERTY_ID = process.env.GA_PROPERTY_ID || "504985686"
-    const CLIENT_EMAIL = process.env.GA_CLIENT_EMAIL
-    let PRIVATE_KEY = process.env.GA_PRIVATE_KEY
+    // Pega credenciais do ambiente do Netlify
+    const privateKey = process.env.GA_PRIVATE_KEY?.replace(/\\n/g, "\n");
+    const clientEmail = process.env.GA_CLIENT_EMAIL;
+    const propertyId = "properties/504985686"; // formato correto para GA4
 
-    if (!PROPERTY_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Variáveis de ambiente faltando' })
-      }
-    }
+    // Autenticação com service account
+    const auth = new google.auth.JWT({
+      email: clientEmail,
+      key: privateKey,
+      scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
+    });
 
-    PRIVATE_KEY = PRIVATE_KEY.replace(/\\n/g, '\n')
+    const analyticsDataClient = google.analyticsdata({
+      version: "v1beta",
+      auth,
+    });
 
-    const jwt = new google.auth.JWT(
-      CLIENT_EMAIL,
-      null,
-      PRIVATE_KEY,
-      ['https://www.googleapis.com/auth/analytics.readonly']
-    )
+    // Pega o primeiro e o último dia do mês atual
+    const now = new Date();
+    const startDate = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}-01`;
+    const endDate = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}-${String(new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0
+    ).getDate()).padStart(2, "0")}`;
 
-    await jwt.authorize()
-
-    const analyticsdata = google.analyticsdata({
-      version: 'v1beta',
-      auth: jwt
-    })
-
-    const today = new Date()
-    const startDate = new Date(today.getFullYear(), today.getMonth(), 1)
-    const formatDate = d => d.toISOString().slice(0, 10)
-
-    const res = await analyticsdata.properties.runReport({
-      property: `properties/${PROPERTY_ID}`,
+    // Faz a consulta
+    const response = await analyticsDataClient.properties.runReport({
+      property: propertyId,
       requestBody: {
-        dateRanges: [{ startDate: formatDate(startDate), endDate: formatDate(today) }],
-        metrics: [{ name: 'sessions' }]
-      }
-    })
+        dateRanges: [{ startDate, endDate }],
+        metrics: [{ name: "activeUsers" }],
+      },
+    });
 
-    let total = 0
-    if (res.data.rows && res.data.rows.length > 0) {
-      total = Number(res.data.rows[0].metricValues[0].value || 0)
-    }
+    const total =
+      response.data.rows?.[0]?.metricValues?.[0]?.value || "0";
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ total })
-    }
-
-  } catch (err) {
+      body: JSON.stringify({ total }),
+    };
+  } catch (error) {
+    console.error("Erro na função getMonthly:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: 'Erro ao consultar Google Analytics',
-        detail: err.message,
-        stack: err.stack
-      })
-    }
+      body: JSON.stringify({ error: error.message }),
+    };
   }
 }
