@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Monitor — Visitas do mês</title>
+  <style>
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:0;padding:30px;background:#0b1220;color:#e6eef8;display:flex;align-items:center;justify-content:center;height:100vh}
+    .card{background:#081026;padding:24px;border-radius:12px;max-width:420px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.6);text-align:center}
+    .big{font-size:48px;font-weight:700;margin:18px 0}
+    .small{color:#9fb0d6;font-size:14px}
+    button{padding:10px 14px;border-radius:8px;border:0;background:#0ea5a0;color:#042a2a;font-weight:700;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Visitas do mês</h2>
+    <div id="value" class="big">—</div>
+    <div id="info" class="small">Carregando...</div>
+    <div style="margin-top:18px">
+      <button id="refresh">Atualizar</button>
+    </div>
+  </div>
+
+  <script>
+    const valueEl = document.getElementById('value')
+    const infoEl = document.getElementById('info')
+    const btn = document.getElementById('refresh')
+
+    async function fetchTotal(){
+      valueEl.textContent = '...'
+      infoEl.textContent = 'Consultando API...'
+      try{
+        const res = await fetch('/.netlify/functions/getMonthly')
+        if(!res.ok) throw new Error('Resposta não OK')
+        const js = await res.json()
+        valueEl.textContent = (js.total!==undefined) ? js.total.toLocaleString() : '0'
+        infoEl.textContent = 'Período: Mês atual'
+      }catch(err){
+        valueEl.textContent = '—'
+        infoEl.textContent = 'Erro ao consultar. Veja o console.'
+        console.error(err)
+      }
+    }
+
+    btn.onclick = fetchTotal
+    fetchTotal()
+    setInterval(fetchTotal, 5*60*1000)
+  </script>
+</body>
+</html>
