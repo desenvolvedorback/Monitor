@@ -1,15 +1,15 @@
 const { google } = require('googleapis')
 
-exports.handler = async (event, context) => {
+exports.handler = async () => {
   try {
     const PROPERTY_ID = process.env.GA_PROPERTY_ID || "504985686"
     const CLIENT_EMAIL = process.env.GA_CLIENT_EMAIL
     let PRIVATE_KEY = process.env.GA_PRIVATE_KEY
 
-    if(!PROPERTY_ID || !CLIENT_EMAIL || !PRIVATE_KEY){
+    if (!PROPERTY_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: 'Variáveis de ambiente não configuradas corretamente.' })
+        body: JSON.stringify({ error: 'Variáveis de ambiente faltando' })
       }
     }
 
@@ -31,7 +31,7 @@ exports.handler = async (event, context) => {
 
     const today = new Date()
     const startDate = new Date(today.getFullYear(), today.getMonth(), 1)
-    const formatDate = d => d.toISOString().slice(0,10)
+    const formatDate = d => d.toISOString().slice(0, 10)
 
     const res = await analyticsdata.properties.runReport({
       property: `properties/${PROPERTY_ID}`,
@@ -42,22 +42,23 @@ exports.handler = async (event, context) => {
     })
 
     let total = 0
-    if(res && res.data && res.data.rows && res.data.rows.length > 0){
+    if (res.data.rows && res.data.rows.length > 0) {
       total = Number(res.data.rows[0].metricValues[0].value || 0)
     }
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin':'*'},
       body: JSON.stringify({ total })
     }
 
   } catch (err) {
-    console.error('Erro getMonthly:', err.message || err)
     return {
       statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Erro ao consultar Google Analytics', detail: err.message || String(err) })
+      body: JSON.stringify({
+        error: 'Erro ao consultar Google Analytics',
+        detail: err.message,
+        stack: err.stack
+      })
     }
   }
 }
