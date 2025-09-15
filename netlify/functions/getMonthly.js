@@ -6,7 +6,7 @@ export async function handler() {
     // Pega credenciais do ambiente do Netlify
     const privateKey = process.env.GA_PRIVATE_KEY?.replace(/\\n/g, "\n");
     const clientEmail = process.env.GA_CLIENT_EMAIL;
-    const propertyId = "properties/504985686"; // formato correto para GA4
+    const propertyId = "properties/0727d20ab62b54a86f98753cc07fe3aa82b5f686"; // formato correto para GA4
 
     // Autenticação com service account
     const auth = new google.auth.JWT({
